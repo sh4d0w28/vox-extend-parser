@@ -48,7 +48,7 @@ def readChunk(file:BufferedReader):
     chunkContentLenght = readInt32(file)
     childContentLenght = readInt32(file)
 
-    print('chunk:', chunkId, 'content:', chunkContentLenght, 'child:', childContentLenght)
+    # print('chunk:', chunkId, 'content:', chunkContentLenght, 'child:', childContentLenght)
     
     if chunkContentLenght > 0:
         body = readChunkBody(chunkId, file)
@@ -84,11 +84,64 @@ def readChild(file:BufferedReader, childContentLenght):
     while global_conf.bytesRead < childContentLenght + curpos:
         data = readChunk(file)
         kids.append(data)
-        print('read: ',global_conf.bytesRead, 'limit: ', childContentLenght + curpos)
     return kids
 
 readFileHeader(file)
-cg = readChunk(file)
+chunkMain = readChunk(file)
 
-print(cg)
+chunks = chunkMain['kids']
+
+model_ind = 0
+models = {}
+singleModel = {}
+
+nodes = {}
+
+for chunk in chunks:
+    ## chunk = {'chunkId': 'SIZE', 'body': {'x': 1, 'y': 1, 'z': 1}}
+    
+    if chunk['chunkId'] == 'SIZE':
+        singleModel['size'] = chunk['body']
+    elif chunk['chunkId'] == 'XYZI':
+        singleModel['numVoxels'] = chunk['body']['numVoxels']
+        singleModel['voxels'] = chunk['body']['voxels']
+        models[model_ind] = singleModel
+        model_ind += 1
+    elif chunk['chunkId'] == 'nTRN' or chunk['chunkId'] == 'nGRP' or chunk['chunkId'] == 'nSHP':
+        nodes[chunk['body']['nodeId']] = chunk
+    elif chunk['chunkId'] == 'LAYR':
+        continue
+    else:
+        print('SKIP', chunk)
+
+## add parents
+for node_ind in nodes:
+    thisNode = nodes[node_ind]
+    if 'childNodeId' in thisNode['body']:
+        nodes[thisNode['body']['childNodeId']]['parentNodeId'] = node_ind
+    elif 'childNodeIds' in thisNode['body']:
+        for kidNode in thisNode['body']['childNodeIds']:
+            nodes[kidNode]['parentNodeId'] = node_ind
+
+#reverseHierarchy ( for each leaf collect all frames )
+for node_ind in nodes:
+    thisNode = nodes[node_ind]
+    if thisNode['chunkId'] == 'nSHP':
+        frames = []
+        while 'parentNodeId' in thisNode:
+            thisNode = nodes[thisNode['parentNodeId']]
+            if 'frames' in thisNode['body']:
+                frames += thisNode['body']['frames']
+        nodes[node_ind]['fullFrames'] = frames
+
+print('------------------------------ NODES ------------------------------')
+for node_ind in nodes:
+    if nodes[node_ind]['chunkId'] != 'nSHP':
+        continue
+    print(node_ind, nodes[node_ind])
+
+print('------------------------------ MODELS -----------------------------')
+for model_ind in models:
+    print(model_ind, models[model_ind])
+
 exit(0)
