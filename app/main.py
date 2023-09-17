@@ -1,10 +1,11 @@
 from io import BufferedReader
 import global_conf
 
+from copy import copy
 from chunkreader import *
 from typereader import readInt32
 
-file = open('voxfiles/2px.vox', 'rb')
+file = open('voxfiles/test-copy.vox', 'rb')
 
 # Read 4 bytes as chars
 def readChunkId(file:BufferedReader) -> str:
@@ -76,7 +77,7 @@ def readChunkBody(chunkId, file:BufferedReader) -> dict:
     elif chunkId == 'RGBA':
         return read_RGBA(file)
     else:
-        print(chunkId)
+        print('chunkId unknown: ', chunkId)
 
 def readChild(file:BufferedReader, childContentLenght):
     curpos = global_conf.bytesRead
@@ -98,8 +99,6 @@ singleModel = {}
 nodes = {}
 
 for chunk in chunks:
-    ## chunk = {'chunkId': 'SIZE', 'body': {'x': 1, 'y': 1, 'z': 1}}
-    
     if chunk['chunkId'] == 'SIZE':
         singleModel['size'] = chunk['body']
     elif chunk['chunkId'] == 'XYZI':
@@ -109,7 +108,10 @@ for chunk in chunks:
         model_ind += 1
     elif chunk['chunkId'] == 'nTRN' or chunk['chunkId'] == 'nGRP' or chunk['chunkId'] == 'nSHP':
         nodes[chunk['body']['nodeId']] = chunk
+        print('NID', chunk['body']['nodeId'], chunk)
     elif chunk['chunkId'] == 'LAYR':
+        continue
+    elif chunk['chunkId'] == 'RGBA':
         continue
     else:
         print('SKIP', chunk)
@@ -118,30 +120,52 @@ for chunk in chunks:
 for node_ind in nodes:
     thisNode = nodes[node_ind]
     if 'childNodeId' in thisNode['body']:
-        nodes[thisNode['body']['childNodeId']]['parentNodeId'] = node_ind
+
+        if 'parentNodeId' not in nodes[thisNode['body']['childNodeId']]:
+            nodes[thisNode['body']['childNodeId']]['parentNodeId'] = []    
+
+        nodes[thisNode['body']['childNodeId']]['parentNodeId'].append(node_ind)
     elif 'childNodeIds' in thisNode['body']:
         for kidNode in thisNode['body']['childNodeIds']:
-            nodes[kidNode]['parentNodeId'] = node_ind
+            if 'parentNodeId' not in nodes[kidNode]:
+                nodes[kidNode]['parentNodeId'] = []    
 
-#reverseHierarchy ( for each leaf collect all frames )
-for node_ind in nodes:
-    thisNode = nodes[node_ind]
-    if thisNode['chunkId'] == 'nSHP':
-        frames = []
-        while 'parentNodeId' in thisNode:
-            thisNode = nodes[thisNode['parentNodeId']]
-            if 'frames' in thisNode['body']:
-                frames += thisNode['body']['frames']
-        nodes[node_ind]['fullFrames'] = frames
+            nodes[kidNode]['parentNodeId'].append(node_ind)
 
-print('------------------------------ NODES ------------------------------')
+
+shp_nodes = []
 for node_ind in nodes:
     if nodes[node_ind]['chunkId'] != 'nSHP':
         continue
-    print(node_ind, nodes[node_ind])
+    if 'parentNodeId' not in nodes[node_ind]:
+        continue
+    for parent in nodes[node_ind]['parentNodeId'] :
+        copyNode = copy(nodes[node_ind])
+        copyNode['parentNodeId'] = [parent]
+        shp_nodes.append(copyNode)
+
+#reverseHierarchy ( for each leaf collect all frames )
+for node in shp_nodes:
+    frames = []
+    name = ''
+    thisNode = copy(node)
+    while 'parentNodeId' in thisNode:
+        thisNode = nodes[thisNode['parentNodeId'][0]]
+        if 'frames' in thisNode['body']:
+            frames += thisNode['body']['frames']
+        if thisNode['body']['attrs']:
+            if '_name' in thisNode['body']['attrs']:
+                name += thisNode['body']['attrs']['_name'] + '_'
+    node['fullFrames'] = frames
+    if name != '':
+        node['name'] = name
+
+print('------------------------------ NODES ------------------------------')
+for node in shp_nodes:
+    print('nodes', node)
 
 print('------------------------------ MODELS -----------------------------')
 for model_ind in models:
-    print(model_ind, models[model_ind])
+    print('models', model_ind, models[model_ind])
 
 exit(0)
