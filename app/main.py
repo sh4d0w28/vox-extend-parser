@@ -1,9 +1,11 @@
 from io import BufferedReader
 import global_conf
 
+from json import dumps
 from copy import copy
 from chunkreader import *
 from typereader import readInt32
+from voxwriter import generateVoxFileByModel
 
 file = open('voxfiles/test-copy.vox', 'rb')
 
@@ -104,7 +106,7 @@ for chunk in chunks:
     elif chunk['chunkId'] == 'XYZI':
         singleModel['numVoxels'] = chunk['body']['numVoxels']
         singleModel['voxels'] = chunk['body']['voxels']
-        models[model_ind] = singleModel
+        models[model_ind] = copy(singleModel)
         model_ind += 1
     elif chunk['chunkId'] == 'nTRN' or chunk['chunkId'] == 'nGRP' or chunk['chunkId'] == 'nSHP':
         nodes[chunk['body']['nodeId']] = chunk
@@ -160,12 +162,44 @@ for node in shp_nodes:
     if name != '':
         node['name'] = name
 
-print('------------------------------ NODES ------------------------------')
-for node in shp_nodes:
-    print('nodes', node)
 
+res = {}
 print('------------------------------ MODELS -----------------------------')
+res['models'] = {}
 for model_ind in models:
     print('models', model_ind, models[model_ind])
+    generateVoxFileByModel("splitvox/model"+str(model_ind), models[model_ind])
+    res['models'][str(model_ind)] = 'model'+str(model_ind)+'.vox'
 
-exit(0)
+print('------------------------------ NODES ------------------------------')
+res['scene'] = []
+for node in shp_nodes:
+    modelId = node['body']['models'][0]['modelId']
+    frames = node['fullFrames']
+    dx = 0
+    dy = 0
+    dz = 0
+    ra = 0
+    if len(frames) > 0:
+        if '_t' in frames[0]:
+            ts = frames[0]['_t'].split(' ')
+            dx = int(ts[0])
+            dy = int(ts[1])
+            dz = int(ts[2])
+        if '_r' in frames[0]:
+            ra = frames[0]['_r']
+
+
+    res['scene'].append({
+        "model":modelId,
+        "dx":dx,
+        "dy":dy,
+        "dz":dz,
+        "ra":ra
+    })
+print(res)
+
+json_object = dumps(res)
+
+fileresult = open("splitvox/result.json","w")
+fileresult.write(json_object)
