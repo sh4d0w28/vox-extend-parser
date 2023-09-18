@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - loaders - vox</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+</head>
+
+<body>
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../voximport/build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+    </script>
+
+    <script>
+        var models = {"models": {"0": "model0.vox", "1": "model1.vox"}, "scene": [{"model": 0, "dx": 2, "dy": 3, "dz": 1, "ra": "33"}, {"model": 0, "dx": -3, "dy": 2, "dz": 1, "ra": 0}, {"model": 0, "dx": -2, "dy": -3, "dz": 1, "ra": "17"}, {"model": 1, "dx": 1, "dy": -1, "dz": 1, "ra": "33"}]}
+    </script>
+
+	<script type="module">
+		import * as THREE from 'three';
+	</script>
+
+</body>
+
+</html>
