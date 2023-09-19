@@ -1,3 +1,6 @@
 *.vox
 *.json
 *.tags
+*.obj
+*.mtl
+*.png
