@@ -9,8 +9,9 @@
 
 <body>
 	<script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+	<script src="result.js"></script>
 
-<script type="importmap">
+	<script type="importmap">
   {
     "imports": {
       "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
@@ -18,12 +19,6 @@
     }
   }
 </script>
-
-	<script>
-		var models = { "models": { "0": "model0.vox", "1": "model1.vox" }, "scene": [{ "model": 0, "dx": 2, "dy": 3, "dz": 1, "ra": "33" }, { "model": 0, "dx": -3, "dy": 2, "dz": 1, "ra": 0 }, { "model": 0, "dx": -2, "dy": -3, "dz": 1, "ra": "17" }, { "model": 1, "dx": 1, "dy": -1, "dz": 1, "ra": "33" }] }
-	</script>
-
-
 	<script type="module">
 		import * as THREE from 'three';
 		import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
@@ -33,61 +28,71 @@
 
 		var scene = new THREE.Scene();
 		var renderer = new THREE.WebGLRenderer();
-		renderer.setPixelRatio( window.devicePixelRatio  );
-		renderer.setSize( window.innerWidth, window.innerHeight );
-		document.body.appendChild( renderer.domElement );
+		renderer.setPixelRatio(window.devicePixelRatio);
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		document.body.appendChild(renderer.domElement);
 
-		var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-		camera.position.set( -5, 5, 5 );
-		camera.lookAt(new THREE.Vector3(0,0,0));
-		scene.add( camera );
+		var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+		camera.position.set(-2, 2, 2);
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		scene.add(camera);
 
-		var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
-		scene.add( helper );
+		var helper = new THREE.GridHelper(10, 100, 0x222222, 0x222222);
+		scene.add(helper);
+
+		var helper2 = new THREE.AxesHelper();
+		scene.add(helper2)
 
 		drawModels(models)
 		render()
 
 		// OrbitControls is used for the basic camera controls.
-		const controls = new OrbitControls( camera, renderer.domElement );
+		const controls = new OrbitControls(camera, renderer.domElement);
 		controls.update();
-		
-		var ambientLight = new THREE.AmbientLight( 0xcccccc, 2 );
-		scene.add( ambientLight );
 
-		window.addEventListener( 'resize', onWindowResize, false );
+		var ambientLight = new THREE.AmbientLight(0xcccccc, 2);
+		scene.add(ambientLight);
+
+		window.addEventListener('resize', onWindowResize, false);
 
 
 		function render() {
-			renderer.render( scene, camera );
-			requestAnimationFrame( render );
+			renderer.render(scene, camera);
+			requestAnimationFrame(render);
 		}
 
-		function onWindowResize()
-		{
+		function onWindowResize() {
 			camera.aspect = window.innerWidth / window.innerHeight;
 			camera.updateProjectionMatrix();
 
-			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setSize(window.innerWidth, window.innerHeight);
 		}
 
 		function drawModels(modelsList) {
 			var dict = models.models;
 			var parsedScene = models.scene;
 
-			parsedScene.forEach(function(value){
+			parsedScene.forEach(function (value) {
 				var filename = dict[value.model]
 
 				var mtlLoader = new MTLLoader();
-				var url = filename.replace('.vox','.mtl');
+				var url = filename.replace('.vox', '.mtl');
 				mtlLoader.load(url, function (materials) {
 					materials.preload();
 					var objLoader = new OBJLoader();
 					objLoader.setMaterials(materials);
-					objLoader.load(filename.replace('.vox','.obj'), function (object) {
-						object.position.x = value.dx/10
-						object.position.z = value.dy/10
-						object.position.y = value.dz/10
+					objLoader.load(filename.replace('.vox', '.obj'), function (object) {
+
+						if (value.ra == "33") {
+							object.rotation.y = Math.PI
+						} else if (value.ra == "0") {
+							object.rotation.y = -Math.PI / 2
+						}
+
+
+						object.position.x = value.dy / 10 // threejs = vox ?
+						object.position.y = value.dz / 10
+						object.position.z = value.dx / 10
 						scene.add(object);
 						console.log('object loaded');
 					});

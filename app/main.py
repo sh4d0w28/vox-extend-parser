@@ -203,3 +203,9 @@ json_object = dumps(res)
 
 fileresult = open("splitvox/result.json","w")
 fileresult.write(json_object)
+fileresult.close()
+
+fileresult = open("splitvox/result.js","w")
+fileresult.write("var models = ")
+fileresult.write(json_object)
+fileresult.close()
